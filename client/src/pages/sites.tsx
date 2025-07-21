@@ -57,7 +57,7 @@ export default function Sites() {
       case 'on_hold':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-cyan-100 text-cyan-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -117,7 +117,7 @@ export default function Sites() {
                     setEditingSite(null);
                     setIsDialogOpen(true);
                   }}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-cyan-600 hover:bg-cyan-700"
                 >
                   <i className="fas fa-plus mr-2"></i>
                   Add New Site
@@ -145,6 +145,7 @@ export default function Sites() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Site Name
                     </th>
@@ -166,11 +167,12 @@ export default function Sites() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sites?.map((site: Site) => (
+                  {sites?.map((site: Site, idx: number) => (
                     <tr key={site.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{site.siteName}</div>
-                        <div className="text-sm text-gray-500">{site.address}</div>
+                        {/* <div className="text-sm text-gray-500">{site.location}</div> */}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {site.location}
@@ -181,10 +183,11 @@ export default function Sites() {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${site.budget?.toLocaleString() || 'N/A'}
+                        Ks {site.budget?.toLocaleString() || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {site.startDate ? new Date(site.startDate).toLocaleDateString() : 'N/A'}
+                        
+                        {new Date(site.startDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <Button

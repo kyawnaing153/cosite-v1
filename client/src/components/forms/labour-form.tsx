@@ -51,8 +51,8 @@ export default function LabourForm({ labour, onSuccess }: LabourFormProps) {
     mutationFn: async (data: z.infer<typeof labourFormSchema>) => {
       const submitData = {
         ...data,
-        dailyWage: data.dailyWage ? parseFloat(data.dailyWage) : null,
-        monthlySalary: data.monthlySalary ? parseFloat(data.monthlySalary) : null,
+        dailyWage: data.dailyWage || null,
+        monthlySalary: data.monthlySalary || null,
       };
       
       if (labour) {

@@ -26,7 +26,7 @@ export default function RecentPurchases() {
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800">Recent Purchases</h3>
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button className="bg-cyan-600 hover:bg-cyan-700">
             <i className="fas fa-plus mr-2"></i>
             New Purchase
           </Button>

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 
 export default function RecentSites() {
   const { data: sites, isLoading } = useQuery({
@@ -28,7 +29,7 @@ export default function RecentSites() {
       case 'on_hold':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-cyan-100 text-cyan-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -52,8 +53,10 @@ export default function RecentSites() {
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800">Recent Sites</h3>
-          <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-            View All
+          <button className="text-cyan-600 hover:text-cyan-800 text-sm font-medium">
+            <Link href="/sites">
+              View All
+            </Link>
           </button>
         </div>
       </div>
@@ -62,8 +65,8 @@ export default function RecentSites() {
           {sites?.map((site: any) => (
             <div key={site.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-building text-blue-600"></i>
+                <div className="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-building text-cyan-600"></i>
                 </div>
                 <div>
                   <p className="font-medium text-gray-800">{site.siteName}</p>

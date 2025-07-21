@@ -55,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req, res) => {
     try {
       const { username, password } = loginSchema.parse(req.body);
-      
+
       const user = await storage.authenticateUser(username, password);
       if (!user) {
         return res.status(401).json({ message: 'Invalid credentials' });
@@ -67,24 +67,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { expiresIn: '24h' }
       );
 
-      res.json({ 
-        token, 
-        user: { 
-          id: user.id, 
-          username: user.username, 
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
           fullname: user.fullname,
-          role: user.role 
+          role: user.role
         }
       });
     } catch (error) {
-      res.status(400).json({ message: 'Invalid request data' });
+      res.status(400).json({ message: 'Invalid request data why' });
     }
   });
 
   app.post('/api/auth/register', async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
@@ -92,12 +92,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.createUser(userData);
-      res.status(201).json({ 
-        user: { 
-          id: user.id, 
-          username: user.username, 
+      res.status(201).json({
+        user: {
+          id: user.id,
+          username: user.username,
           fullname: user.fullname,
-          role: user.role 
+          role: user.role
         }
       });
     } catch (error) {
@@ -112,14 +112,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      res.json({ 
-        id: user.id, 
-        username: user.username, 
+      res.json({
+        id: user.id,
+        username: user.username,
         fullname: user.fullname,
-        role: user.role 
+        role: user.role
       });
     } catch (error) {
       res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/staff/users', async (req, res) => {
+    try {
+      const staffs = await storage.getStaffUsers();
+      // Always return an array, even if empty
+      const mappedStaffs = Array.isArray(staffs)
+        ? staffs.map(user => ({
+            id: user.id ?? user.user_id,
+            fullname: user.fullname,
+            joinDate: user.joinDate,
+          }))
+        : [];
+
+      res.json(mappedStaffs);
+    } catch (error) {
+      console.error('getting user error:', error);
+      res.status(500).json({ message: 'Failed to fetch staff users' });
     }
   });
 
@@ -222,8 +241,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Labour Groups routes
   app.get('/api/labour-groups', authenticateToken, async (req, res) => {
     try {
-      const siteId = req.query.siteId ? parseInt(req.query.siteId as string) : undefined;
-      const groups = await storage.getLabourGroups(siteId);
+      //const siteId = req.query.siteId ? parseInt(req.query.siteId as string) : undefined;
+      const groups = await storage.getLabourGroups();
       res.json(groups);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch labour groups' });
@@ -562,10 +581,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendanceData = attendanceSchema.parse(req.body);
       // For now, just return success
       // In a real implementation, you would save to an attendance table
-      res.status(201).json({ 
-        id: Date.now(), 
+      res.status(201).json({
+        id: Date.now(),
         ...attendanceData,
-        recordedByUserId: req.user.id 
+        recordedByUserId: req.user.id
       });
     } catch (error) {
       console.error('Attendance creation error:', error);

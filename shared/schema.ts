@@ -13,10 +13,10 @@ export const attendanceStatusEnum = pgEnum("attendance_status", ["present", "abs
 // Users table
 export const users = pgTable("users", {
   id: serial("user_id").primaryKey(),
-  username: varchar("username", { length: 255 }).notNull().unique(),
+  username: varchar("username", { length: 150 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull(),
-  fullname: varchar("fullname", { length: 255 }).notNull(),
+  email: varchar("email", { length: 150 }).notNull(),
+  fullname: varchar("fullname", { length: 200 }).notNull(),
   role: varchar("role", { length: 50 }).notNull().default("staff"),
   status: userStatusEnum("status").notNull().default("active"),
   joinDate: timestamp("join_date").defaultNow(),
@@ -28,12 +28,12 @@ export const users = pgTable("users", {
 export const sites = pgTable("sites", {
   id: serial("site_id").primaryKey(),
   siteName: varchar("site_name", { length: 255 }).notNull(),
-  location: varchar("location", { length: 255 }).notNull(),
+  userId: serial("user_id").references(() => users.id),
+  location: text("location"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   budget: decimal("budget", { precision: 15, scale: 2 }),
   status: siteStatusEnum("status").notNull().default("on_progress"),
-  address: text("address"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -41,10 +41,10 @@ export const sites = pgTable("sites", {
 // Labour groups table
 export const labourGroups = pgTable("labour_groups", {
   id: serial("group_id").primaryKey(),
-  siteId: integer("site_id").references(() => sites.id),
-  groupName: varchar("group_name", { length: 255 }).notNull(),
+  groupName: varchar("group_name", { length: 200 }).notNull(),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Labour table
@@ -52,7 +52,7 @@ export const labour = pgTable("labour", {
   id: serial("labour_id").primaryKey(),
   siteId: integer("site_id").references(() => sites.id),
   labourGroupId: integer("labour_group_id").references(() => labourGroups.id),
-  fullName: varchar("full_name", { length: 255 }).notNull(),
+  fullName: varchar("full_name", { length: 200 }).notNull(),
   labourType: labourTypeEnum("labour_type").notNull(),
   contactNumber: varchar("contact_number", { length: 20 }),
   address: text("address"),
@@ -70,12 +70,14 @@ export const purchases = pgTable("purchases", {
   id: serial("purchase_id").primaryKey(),
   siteId: integer("site_id").references(() => sites.id),
   purchaseDate: timestamp("purchase_date").defaultNow(),
-  itemDescription: text("item_description").notNull(),
   purchaseType: varchar("purchase_type", { length: 100 }),
   quantity: decimal("quantity", { precision: 10, scale: 2 }),
   units: varchar("units", { length: 50 }),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
   totalAmount: decimal("total_amount", { precision: 15, scale: 2 }),
+  invoiceNumberORImg: varchar("invoice_number_or_img", { length: 50 }),
+  recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
+  itemDescription: text("item_description"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -86,16 +88,16 @@ export const salary = pgTable("salary", {
   siteId: integer("site_id").references(() => sites.id),
   labourId: integer("labour_id").references(() => labour.id),
   paymentDate: timestamp("payment_date").defaultNow(),
-  paymentAmount: decimal("payment_amount", { precision: 10, scale: 2 }),
+  //paymentAmount: decimal("payment_amount", { precision: 10, scale: 2 }),
   paymentType: varchar("payment_type", { length: 50 }),
-  dailyWage: decimal("daily_wage", { precision: 10, scale: 2 }),
-  pieceworkPayment: decimal("piecework_payment", { precision: 10, scale: 2 }),
-  advancePayment: decimal("advance_payment", { precision: 10, scale: 2 }),
-  totalDailywage: decimal("total_daily_wage", { precision: 10, scale: 2 }),
-  totalPiecework: decimal("total_piecework", { precision: 10, scale: 2 }),
-  totalAdvancePayment: decimal("total_advance_payment", { precision: 10, scale: 2 }),
-  totalRefund: decimal("total_refund", { precision: 10, scale: 2 }),
-  refund: decimal("refund", { precision: 10, scale: 2 }),
+  //dailyWage: decimal("daily_wage", { precision: 10, scale: 2 }),
+  //pieceworkPayment: decimal("piecework_payment", { precision: 10, scale: 2 }),
+  //advancePayment: decimal("advance_payment", { precision: 10, scale: 2 }),
+  //totalDailywage: decimal("total_daily_wage", { precision: 10, scale: 2 }),
+  //totalPiecework: decimal("total_piecework", { precision: 10, scale: 2 }),
+  //totalAdvancePayment: decimal("total_advance_payment", { precision: 10, scale: 2 }),
+  //totalRefund: decimal("total_refund", { precision: 10, scale: 2 }),
+  //refund: decimal("refund", { precision: 10, scale: 2 }),
   remarks: text("remarks"),
   recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -105,8 +107,14 @@ export const salary = pgTable("salary", {
 // Invoices table
 export const invoices = pgTable("invoices", {
   id: serial("invoice_id").primaryKey(),
-  invoiceNumberOrImg: varchar("invoice_number_or_img", { length: 255 }),
   siteId: integer("site_id").references(() => sites.id),
+  recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
+  invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
+  invoiceDate: timestamp("invoice_date").defaultNow(),
+  totalPiecework: decimal("total_piecework", { precision: 15, scale: 2 }),
+  totalDailyWage: decimal("total_daily_wage", { precision: 15, scale: 2 }),
+  totalAdvancePayment: decimal("total_advance_payment", { precision: 15, scale: 2 }),
+  totalRefund: decimal("total_refund", { precision: 15, scale: 2 }),
   grandTotal: decimal("grand_total", { precision: 15, scale: 2 }),
   paymentStatus: paymentStatusEnum("payment_status").notNull().default("credit"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -118,12 +126,12 @@ export const invoiceLabourDetail = pgTable("invoice_labour_detail", {
   invoiceId: integer("invoice_id").references(() => invoices.id),
   labourId: integer("labour_id").references(() => labour.id),
   labourGroupId: integer("labour_group_id").references(() => labourGroups.id),
-  siteId: integer("site_id").references(() => sites.id),
-  date: timestamp("date"),
-  dailyWage: decimal("daily_wage", { precision: 10, scale: 2 }),
   pieceworkPayment: decimal("piecework_payment", { precision: 10, scale: 2 }),
+  dailyWage: decimal("daily_wage", { precision: 10, scale: 2 }),
+  advancePayment: decimal("advance_payment", { precision: 10, scale: 2 }),
+  refund: decimal("refund", { precision: 10, scale: 2 }),
   sign: varchar("sign", { length: 255 }),
-  recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
+  //recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
 });
 
 // Attendance table (extended from the original requirements)
@@ -142,15 +150,16 @@ export const attendance = pgTable("attendance", {
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
+  sites: many(sites),
   labour: many(labour),
   salary: many(salary),
-  invoiceLabourDetail: many(invoiceLabourDetail),
+  invoice: many(invoices),
   attendance: many(attendance),
 }));
 
-export const sitesRelations = relations(sites, ({ many }) => ({
+export const sitesRelations = relations(sites, ({ one, many }) => ({
+  user: one(users, { fields: [sites.userId], references: [users.id] }),
   labour: many(labour),
-  labourGroups: many(labourGroups),
   purchases: many(purchases),
   salary: many(salary),
   invoices: many(invoices),
@@ -159,7 +168,6 @@ export const sitesRelations = relations(sites, ({ many }) => ({
 }));
 
 export const labourGroupsRelations = relations(labourGroups, ({ one, many }) => ({
-  site: one(sites, { fields: [labourGroups.siteId], references: [sites.id] }),
   labour: many(labour),
   invoiceLabourDetail: many(invoiceLabourDetail),
 }));
@@ -175,6 +183,7 @@ export const labourRelations = relations(labour, ({ one, many }) => ({
 
 export const purchasesRelations = relations(purchases, ({ one }) => ({
   site: one(sites, { fields: [purchases.siteId], references: [sites.id] }),
+  recordedBy: one(users, { fields: [purchases.recordedByUserId], references: [users.id] }),
 }));
 
 export const salaryRelations = relations(salary, ({ one }) => ({
@@ -186,14 +195,13 @@ export const salaryRelations = relations(salary, ({ one }) => ({
 export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   site: one(sites, { fields: [invoices.siteId], references: [sites.id] }),
   invoiceLabourDetail: many(invoiceLabourDetail),
+  recordedByUser: one(users, { fields: [invoices.recordedByUserId], references: [users.id] }),
 }));
 
 export const invoiceLabourDetailRelations = relations(invoiceLabourDetail, ({ one }) => ({
   invoice: one(invoices, { fields: [invoiceLabourDetail.invoiceId], references: [invoices.id] }),
   labour: one(labour, { fields: [invoiceLabourDetail.labourId], references: [labour.id] }),
   labourGroup: one(labourGroups, { fields: [invoiceLabourDetail.labourGroupId], references: [labourGroups.id] }),
-  site: one(sites, { fields: [invoiceLabourDetail.siteId], references: [sites.id] }),
-  recordedByUser: one(users, { fields: [invoiceLabourDetail.recordedByUserId], references: [users.id] }),
 }));
 
 export const attendanceRelations = relations(attendance, ({ one }) => ({
@@ -210,10 +218,13 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertSiteSchema = createInsertSchema(sites).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  }).extend({
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
+  });
 
 export const insertLabourGroupSchema = createInsertSchema(labourGroups).omit({
   id: true,

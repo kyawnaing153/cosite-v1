@@ -25,12 +25,13 @@ import {
   type InsertInvoiceLabourDetail,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, count, sum, sql } from "drizzle-orm";
+import { eq, desc, and, count, sum, sql, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
+  getStaffUsers(): Promise<User[]>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   authenticateUser(username: string, password: string): Promise<User | null>;
@@ -100,6 +101,20 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getStaffUsers(): Promise<User[]> {
+    const staffs = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          inArray(users.role, ['staff', 'manager']),
+          eq(users.status, 'active')
+        )
+      );
+    //console.log("Backend: Fetched staff users:", staffs);
+    return staffs;
+  }
+
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
@@ -119,6 +134,7 @@ export class DatabaseStorage implements IStorage {
     if (!user) return null;
     
     const isValid = await bcrypt.compare(password, user.password);
+    //const isValid = user.password === password; // For simplicity, using plain text comparison
     return isValid ? user : null;
   }
 
@@ -152,11 +168,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Labour Group operations
-  async getLabourGroups(siteId?: number): Promise<LabourGroup[]> {
+  async getLabourGroups(): Promise<LabourGroup[]> {
     const query = db.select().from(labourGroups);
-    if (siteId) {
-      query.where(eq(labourGroups.siteId, siteId));
-    }
     return await query.orderBy(desc(labourGroups.createdAt));
   }
 

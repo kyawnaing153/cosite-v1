@@ -3,7 +3,7 @@ export default function RecentActivity() {
     {
       id: 1,
       type: 'user-plus',
-      color: 'blue',
+      color: 'cyan',
       title: 'New labour registered',
       details: 'Mike Johnson joined Downtown Plaza',
       time: '2 hours ago',
@@ -36,12 +36,12 @@ export default function RecentActivity() {
 
   const getColorClasses = (color: string) => {
     const colorMap = {
-      blue: 'border-blue-500 bg-blue-50 text-blue-600',
+      cyan: 'border-cyan-500 bg-cyan-50 text-cyan-600',
       orange: 'border-orange-500 bg-orange-50 text-orange-600',
       green: 'border-green-500 bg-green-50 text-green-600',
       yellow: 'border-yellow-500 bg-yellow-50 text-yellow-600',
     };
-    return colorMap[color as keyof typeof colorMap] || colorMap.blue;
+    return colorMap[color as keyof typeof colorMap] || colorMap.cyan;
   };
 
   return (
@@ -49,7 +49,7 @@ export default function RecentActivity() {
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800">Recent Labour Activity</h3>
-          <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+          <button className="text-cyan-600 hover:text-cyan-800 text-sm font-medium">
             View All
           </button>
         </div>

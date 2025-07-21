@@ -23,8 +23,8 @@ export default function Dashboard() {
             <MetricsCard
               title="Active Sites"
               value={metrics?.activeSites || 0}
-              icon="fas fa-building text-blue-600"
-              iconColor="bg-blue-100"
+              icon="fas fa-building text-cyan-600"
+              iconColor="bg-cyan-100"
               change={{ value: "+2.5%", type: "increase" }}
             />
             <MetricsCard
