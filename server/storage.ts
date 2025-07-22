@@ -35,53 +35,61 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   authenticateUser(username: string, password: string): Promise<User | null>;
-  
+
   // Site operations
   getSites(): Promise<Site[]>;
   getSite(id: number): Promise<Site | undefined>;
   createSite(site: InsertSite): Promise<Site>;
   updateSite(id: number, site: Partial<InsertSite>): Promise<Site>;
   deleteSite(id: number): Promise<boolean>;
-  
+
   // Labour Group operations
   getLabourGroups(siteId?: number): Promise<LabourGroup[]>;
   getLabourGroup(id: number): Promise<LabourGroup | undefined>;
   createLabourGroup(group: InsertLabourGroup): Promise<LabourGroup>;
-  updateLabourGroup(id: number, group: Partial<InsertLabourGroup>): Promise<LabourGroup>;
+  updateLabourGroup(
+    id: number,
+    group: Partial<InsertLabourGroup>
+  ): Promise<LabourGroup>;
   deleteLabourGroup(id: number): Promise<boolean>;
-  
+
   // Labour operations
   getLabour(siteId?: number): Promise<Labour[]>;
   getLabourById(id: number): Promise<Labour | undefined>;
   createLabour(labourData: InsertLabour): Promise<Labour>;
   updateLabour(id: number, labourData: Partial<InsertLabour>): Promise<Labour>;
   deleteLabour(id: number): Promise<boolean>;
-  
+
   // Purchase operations
   getPurchases(siteId?: number): Promise<Purchase[]>;
   getPurchase(id: number): Promise<Purchase | undefined>;
   createPurchase(purchase: InsertPurchase): Promise<Purchase>;
-  updatePurchase(id: number, purchase: Partial<InsertPurchase>): Promise<Purchase>;
+  updatePurchase(
+    id: number,
+    purchase: Partial<InsertPurchase>
+  ): Promise<Purchase>;
   deletePurchase(id: number): Promise<boolean>;
-  
+
   // Salary operations
   getSalaries(siteId?: number, labourId?: number): Promise<Salary[]>;
   getSalary(id: number): Promise<Salary | undefined>;
   createSalary(salaryData: InsertSalary): Promise<Salary>;
   updateSalary(id: number, salaryData: Partial<InsertSalary>): Promise<Salary>;
   deleteSalary(id: number): Promise<boolean>;
-  
+
   // Invoice operations
   getInvoices(siteId?: number): Promise<Invoice[]>;
   getInvoice(id: number): Promise<Invoice | undefined>;
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice>;
   deleteInvoice(id: number): Promise<boolean>;
-  
+
   // Invoice Labour Detail operations
   getInvoiceLabourDetails(invoiceId: number): Promise<InvoiceLabourDetail[]>;
-  createInvoiceLabourDetail(detail: InsertInvoiceLabourDetail): Promise<InvoiceLabourDetail>;
-  
+  createInvoiceLabourDetail(
+    detail: InsertInvoiceLabourDetail
+  ): Promise<InvoiceLabourDetail>;
+
   // Dashboard operations
   getDashboardMetrics(): Promise<{
     activeSites: number;
@@ -107,8 +115,8 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(
         and(
-          inArray(users.role, ['staff', 'manager']),
-          eq(users.status, 'active')
+          inArray(users.role, ["staff", "manager"]),
+          eq(users.status, "active")
         )
       );
     //console.log("Backend: Fetched staff users:", staffs);
@@ -116,7 +124,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
     return user;
   }
 
@@ -129,12 +140,15 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async authenticateUser(username: string, password: string): Promise<User | null> {
+  async authenticateUser(
+    username: string,
+    password: string
+  ): Promise<User | null> {
     const user = await this.getUserByUsername(username);
     if (!user) return null;
-    
-    const isValid = await bcrypt.compare(password, user.password);
-    //const isValid = user.password === password; // For simplicity, using plain text comparison
+
+    //const isValid = await bcrypt.compare(password, user.password);
+    const isValid = user.password === password; // For simplicity, using plain text comparison
     return isValid ? user : null;
   }
 
@@ -174,7 +188,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLabourGroup(id: number): Promise<LabourGroup | undefined> {
-    const [group] = await db.select().from(labourGroups).where(eq(labourGroups.id, id));
+    const [group] = await db
+      .select()
+      .from(labourGroups)
+      .where(eq(labourGroups.id, id));
     return group;
   }
 
@@ -183,7 +200,10 @@ export class DatabaseStorage implements IStorage {
     return group;
   }
 
-  async updateLabourGroup(id: number, groupData: Partial<InsertLabourGroup>): Promise<LabourGroup> {
+  async updateLabourGroup(
+    id: number,
+    groupData: Partial<InsertLabourGroup>
+  ): Promise<LabourGroup> {
     const [group] = await db
       .update(labourGroups)
       .set(groupData)
@@ -207,7 +227,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLabourById(id: number): Promise<Labour | undefined> {
-    const [labourData] = await db.select().from(labour).where(eq(labour.id, id));
+    const [labourData] = await db
+      .select()
+      .from(labour)
+      .where(eq(labour.id, id));
     return labourData;
   }
 
@@ -216,7 +239,10 @@ export class DatabaseStorage implements IStorage {
     return newLabour;
   }
 
-  async updateLabour(id: number, labourData: Partial<InsertLabour>): Promise<Labour> {
+  async updateLabour(
+    id: number,
+    labourData: Partial<InsertLabour>
+  ): Promise<Labour> {
     const [updatedLabour] = await db
       .update(labour)
       .set({ ...labourData, updatedAt: new Date() })
@@ -240,16 +266,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPurchase(id: number): Promise<Purchase | undefined> {
-    const [purchase] = await db.select().from(purchases).where(eq(purchases.id, id));
+    const [purchase] = await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.id, id));
     return purchase;
   }
 
   async createPurchase(purchaseData: InsertPurchase): Promise<Purchase> {
-    const [purchase] = await db.insert(purchases).values(purchaseData).returning();
+    const [purchase] = await db
+      .insert(purchases)
+      .values(purchaseData)
+      .returning();
     return purchase;
   }
 
-  async updatePurchase(id: number, purchaseData: Partial<InsertPurchase>): Promise<Purchase> {
+  async updatePurchase(
+    id: number,
+    purchaseData: Partial<InsertPurchase>
+  ): Promise<Purchase> {
     const [purchase] = await db
       .update(purchases)
       .set({ ...purchaseData, updatedAt: new Date() })
@@ -266,20 +301,29 @@ export class DatabaseStorage implements IStorage {
   // Salary operations
   async getSalaries(siteId?: number, labourId?: number): Promise<Salary[]> {
     let query = db.select().from(salary);
-    
+
     if (siteId && labourId) {
-      return await query.where(and(eq(salary.siteId, siteId), eq(salary.labourId, labourId))).orderBy(desc(salary.createdAt));
+      return await query
+        .where(and(eq(salary.siteId, siteId), eq(salary.labourId, labourId)))
+        .orderBy(desc(salary.createdAt));
     } else if (siteId) {
-      return await query.where(eq(salary.siteId, siteId)).orderBy(desc(salary.createdAt));
+      return await query
+        .where(eq(salary.siteId, siteId))
+        .orderBy(desc(salary.createdAt));
     } else if (labourId) {
-      return await query.where(eq(salary.labourId, labourId)).orderBy(desc(salary.createdAt));
+      return await query
+        .where(eq(salary.labourId, labourId))
+        .orderBy(desc(salary.createdAt));
     }
-    
+
     return await query.orderBy(desc(salary.createdAt));
   }
 
   async getSalary(id: number): Promise<Salary | undefined> {
-    const [salaryData] = await db.select().from(salary).where(eq(salary.id, id));
+    const [salaryData] = await db
+      .select()
+      .from(salary)
+      .where(eq(salary.id, id));
     return salaryData;
   }
 
@@ -288,7 +332,10 @@ export class DatabaseStorage implements IStorage {
     return newSalary;
   }
 
-  async updateSalary(id: number, salaryData: Partial<InsertSalary>): Promise<Salary> {
+  async updateSalary(
+    id: number,
+    salaryData: Partial<InsertSalary>
+  ): Promise<Salary> {
     const [updatedSalary] = await db
       .update(salary)
       .set({ ...salaryData, updatedAt: new Date() })
@@ -312,7 +359,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getInvoice(id: number): Promise<Invoice | undefined> {
-    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    const [invoice] = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.id, id));
     return invoice;
   }
 
@@ -321,7 +371,10 @@ export class DatabaseStorage implements IStorage {
     return invoice;
   }
 
-  async updateInvoice(id: number, invoiceData: Partial<InsertInvoice>): Promise<Invoice> {
+  async updateInvoice(
+    id: number,
+    invoiceData: Partial<InsertInvoice>
+  ): Promise<Invoice> {
     const [invoice] = await db
       .update(invoices)
       .set({ ...invoiceData, updatedAt: new Date() })
@@ -336,15 +389,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Invoice Labour Detail operations
-  async getInvoiceLabourDetails(invoiceId: number): Promise<InvoiceLabourDetail[]> {
+  async getInvoiceLabourDetails(
+    invoiceId: number
+  ): Promise<InvoiceLabourDetail[]> {
     return await db
       .select()
       .from(invoiceLabourDetail)
       .where(eq(invoiceLabourDetail.invoiceId, invoiceId));
   }
 
-  async createInvoiceLabourDetail(detail: InsertInvoiceLabourDetail): Promise<InvoiceLabourDetail> {
-    const [newDetail] = await db.insert(invoiceLabourDetail).values(detail).returning();
+  async createInvoiceLabourDetail(
+    detail: InsertInvoiceLabourDetail
+  ): Promise<InvoiceLabourDetail> {
+    const [newDetail] = await db
+      .insert(invoiceLabourDetail)
+      .values(detail)
+      .returning();
     return newDetail;
   }
 
@@ -366,11 +426,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(labour.status, "active"));
 
     const [monthlyExpensesResult] = await db
-      .select({ 
-        total: sum(purchases.totalAmount)
+      .select({
+        total: sum(purchases.totalAmount),
       })
       .from(purchases)
-      .where(sql`EXTRACT(MONTH FROM ${purchases.createdAt}) = EXTRACT(MONTH FROM CURRENT_DATE)`);
+      .where(
+        sql`EXTRACT(MONTH FROM ${purchases.createdAt}) = EXTRACT(MONTH FROM CURRENT_DATE)`
+      );
 
     const [pendingInvoicesResult] = await db
       .select({ count: count() })

@@ -16,6 +16,7 @@ import Settings from "@/pages/settings";
 import { AuthProvider, useAuth } from "@/lib/auth.tsx";
 import { useEffect } from "react";
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import { SidebarProvider } from "@/lib/sidebar-context";
 
 function LoginPage() {
   const { login, isLoading } = useAuth();
@@ -119,8 +120,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <Toaster />
-          <Router />
+          <SidebarProvider>
+            <Toaster />
+            <Router />
+          </SidebarProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
