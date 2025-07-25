@@ -4,9 +4,11 @@ import {
   labourGroups,
   labour,
   purchases,
+  purchaseProducts,
   salary,
   invoices,
   invoiceLabourDetail,
+  notifications,
   type User,
   type InsertUser,
   type Site,
@@ -17,12 +19,16 @@ import {
   type InsertLabour,
   type Purchase,
   type InsertPurchase,
+  type PurchaseProduct,
+  type InsertPurchaseProduct,
   type Salary,
   type InsertSalary,
   type Invoice,
   type InsertInvoice,
   type InvoiceLabourDetail,
   type InsertInvoiceLabourDetail,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, inArray } from "drizzle-orm";
@@ -64,6 +70,7 @@ export interface IStorage {
   getPurchases(siteId?: number): Promise<Purchase[]>;
   getPurchase(id: number): Promise<Purchase | undefined>;
   createPurchase(purchase: InsertPurchase): Promise<Purchase>;
+  createPurchaseWithProducts(purchase: InsertPurchase, products: any[]): Promise<Purchase>;
   updatePurchase(
     id: number,
     purchase: Partial<InsertPurchase>
@@ -100,6 +107,15 @@ export interface IStorage {
   getRecentSites(): Promise<Site[]>;
   getRecentPurchases(): Promise<Purchase[]>;
   getPendingWages(): Promise<Salary[]>;
+
+  // Notification operations
+  getNotifications(userId: number): Promise<Notification[]>;
+  getNotification(id: number): Promise<Notification | undefined>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  updateNotification(id: number, notification: Partial<InsertNotification>): Promise<Notification>;
+  deleteNotification(id: number): Promise<boolean>;
+  markNotificationAsRead(id: number): Promise<Notification>;
+  markAllNotificationsAsRead(userId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -265,6 +281,27 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(purchases.createdAt));
   }
 
+  async getPurchaseWithProducts(id: number): Promise<Purchase & { products: PurchaseProduct[] } | undefined> {
+    const [purchase] = await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.id, id));
+
+    if (!purchase) {
+      return undefined;
+    }
+
+    const products = await db
+      .select()
+      .from(purchaseProducts)
+      .where(eq(purchaseProducts.purchaseId, id));
+
+    return {
+      ...purchase,
+      products,
+    };
+  }
+
   async getPurchase(id: number): Promise<Purchase | undefined> {
     const [purchase] = await db
       .select()
@@ -279,6 +316,55 @@ export class DatabaseStorage implements IStorage {
       .values(purchaseData)
       .returning();
     return purchase;
+  }
+
+  async createPurchaseWithProducts(purchaseData: InsertPurchase, products: any[]): Promise<Purchase> {
+    // Use a transaction to ensure both purchase and products are created together
+    return await db.transaction(async (tx) => {
+      // Create the purchase first
+      const [purchase] = await tx
+        .insert(purchases)
+        .values(purchaseData)
+        .returning();
+
+      // Create the purchase products
+      if (products && products.length > 0) {
+        const productData = products.map(product => ({
+          purchaseId: purchase.id,
+          name: product.name,
+          quantity: product.quantity,
+          units: product.units,
+          unitPrice: product.unitPrice,
+          singleTotal: product.singleTotal,
+        }));
+
+        await tx.insert(purchaseProducts).values(productData);
+      }
+
+      return purchase;
+    });
+  }
+
+  async updatePurchaseProducts(purchaseId: number, products: any[]): Promise<void> {
+    // Use a transaction to ensure atomicity
+    await db.transaction(async (tx) => {
+      // Delete existing products for this purchase
+      await tx.delete(purchaseProducts).where(eq(purchaseProducts.purchaseId, purchaseId));
+
+      // Create new products
+      if (products && products.length > 0) {
+        const productData = products.map(product => ({
+          purchaseId,
+          name: product.name,
+          quantity: product.quantity,
+          units: product.units,
+          unitPrice: product.unitPrice,
+          singleTotal: product.singleTotal,
+        }));
+
+        await tx.insert(purchaseProducts).values(productData);
+      }
+    });
   }
 
   async updatePurchase(
@@ -470,6 +556,64 @@ export class DatabaseStorage implements IStorage {
       .where(eq(salary.paymentType, "pending"))
       .orderBy(desc(salary.createdAt))
       .limit(5);
+  }
+
+  // Notification operations
+  async getNotifications(userId: number): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async getNotification(id: number): Promise<Notification | undefined> {
+    const [notification] = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, id));
+    return notification;
+  }
+
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    const [notification] = await db
+      .insert(notifications)
+      .values(notificationData)
+      .returning();
+    return notification;
+  }
+
+  async updateNotification(
+    id: number,
+    notificationData: Partial<InsertNotification>
+  ): Promise<Notification> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ ...notificationData, updatedAt: new Date() })
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification;
+  }
+
+  async deleteNotification(id: number): Promise<boolean> {
+    const result = await db.delete(notifications).where(eq(notifications.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async markNotificationAsRead(id: number): Promise<Notification> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ status: "read", updatedAt: new Date() })
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification;
+  }
+
+  async markAllNotificationsAsRead(userId: number): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ status: "read", updatedAt: new Date() })
+      .where(eq(notifications.userId, userId));
   }
 }
 

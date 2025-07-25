@@ -7,14 +7,14 @@ import PendingWages from "@/components/dashboard/pending-wages";
 import { useQuery } from "@tanstack/react-query";
 
 export default function Dashboard() {
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics = {}, isLoading } = useQuery({
     queryKey: ['/api/dashboard/metrics'],
-  });
+  }) as { data: any, isLoading: boolean };
 
   return (
     <AppLayout title="Dashboard">
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         <MetricsCard
           title="Active Sites"
           value={metrics?.activeSites || 0}
@@ -46,13 +46,13 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Activity and Sites Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
         <RecentSites />
         <RecentActivity />
       </div>
 
       {/* Data Tables Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
         <RecentPurchases />
         <PendingWages />
       </div>

@@ -13,6 +13,7 @@ import Invoices from "@/pages/invoices";
 import Attendance from "@/pages/attendance";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import Notifications from "@/pages/notifications";
 import { AuthProvider, useAuth } from "@/lib/auth.tsx";
 import { useEffect } from "react";
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -109,6 +110,7 @@ function Router() {
       <Route path="/invoices" component={Invoices} />
       <Route path="/attendance" component={Attendance} />
       <Route path="/reports" component={Reports} />
+      <Route path="/notifications" component={Notifications} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>

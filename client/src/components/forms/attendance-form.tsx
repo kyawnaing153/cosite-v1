@@ -27,11 +27,11 @@ interface AttendanceFormProps {
 export default function AttendanceForm({ attendance, onSuccess }: AttendanceFormProps) {
   const { toast } = useToast();
   
-  const { data: sites } = useQuery({
+  const { data: sites = [] } = useQuery({
     queryKey: ['/api/sites'],
   });
 
-  const { data: labour } = useQuery({
+  const { data: labour = [] } = useQuery({
     queryKey: ['/api/labour'],
   });
 
@@ -48,7 +48,7 @@ export default function AttendanceForm({ attendance, onSuccess }: AttendanceForm
   });
 
   const watchSiteId = form.watch("siteId");
-  const filteredLabour = labour?.filter((l: any) => !watchSiteId || l.siteId === watchSiteId);
+  const filteredLabour = (labour as any[]).filter((l: any) => !watchSiteId || l.siteId === watchSiteId);
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof attendanceFormSchema>) => {
@@ -104,7 +104,7 @@ export default function AttendanceForm({ attendance, onSuccess }: AttendanceForm
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {sites?.map((site: any) => (
+                    {(sites as any[]).map((site: any) => (
                       <SelectItem key={site.id} value={site.id.toString()}>
                         {site.siteName}
                       </SelectItem>

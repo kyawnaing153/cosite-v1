@@ -8,6 +8,20 @@
       "when": 1753108220267,
       "tag": "0000_tiny_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1753283480048,
+      "tag": "0001_kind_master_chief",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1753285156778,
+      "tag": "0002_same_winter_soldier",
+      "breakpoints": true
     }
   ]
 }

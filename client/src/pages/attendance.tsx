@@ -10,14 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function Attendance() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedSite, setSelectedSite] = useState<string>("");
+  const [selectedSite, setSelectedSite] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const { data: sites } = useQuery({
+  const { data: sites = [] } = useQuery({
     queryKey: ['/api/sites'],
   });
 
-  const { data: labour } = useQuery({
+  const { data: labour = [] } = useQuery({
     queryKey: ['/api/labour'],
   });
 
@@ -28,7 +28,7 @@ export default function Attendance() {
     { id: 3, labourId: 3, siteId: 1, date: new Date().toISOString().split('T')[0], status: 'half_day', hoursWorked: 4 },
   ];
 
-  const filteredLabour = labour?.filter((l: any) => !selectedSite || l.siteId === parseInt(selectedSite));
+  const filteredLabour = (labour as any[]).filter((l: any) => selectedSite === "all" || l.siteId === parseInt(selectedSite));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -44,12 +44,12 @@ export default function Attendance() {
   };
 
   const getSiteName = (siteId: number) => {
-    const site = sites?.find((s: any) => s.id === siteId);
+    const site = (sites as any[]).find((s: any) => s.id === siteId);
     return site ? site.siteName : `Site #${siteId}`;
   };
 
   const getLabourName = (labourId: number) => {
-    const labourData = labour?.find((l: any) => l.id === labourId);
+    const labourData = (labour as any[]).find((l: any) => l.id === labourId);
     return labourData ? labourData.fullName : `Labour #${labourId}`;
   };
 
@@ -59,7 +59,7 @@ export default function Attendance() {
 
   return (
     <AppLayout title="Attendance">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-800">Attendance Management</h3>
           <p className="text-sm text-gray-600">Track worker attendance and work hours</p>
@@ -91,7 +91,7 @@ export default function Attendance() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Workers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-800">{labour?.length || 0}</div>
+            <div className="text-2xl font-bold text-gray-800">{(labour as any[]).length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -121,7 +121,7 @@ export default function Attendance() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex gap-4 items-center">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-gray-700">Site:</label>
           <Select value={selectedSite} onValueChange={setSelectedSite}>
@@ -129,8 +129,8 @@ export default function Attendance() {
               <SelectValue placeholder="All Sites" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Sites</SelectItem>
-              {sites?.map((site: any) => (
+              <SelectItem value="all">All Sites</SelectItem>
+              {(sites as any[]).map((site: any) => (
                 <SelectItem key={site.id} value={site.id.toString()}>
                   {site.siteName}
                 </SelectItem>
@@ -151,7 +151,8 @@ export default function Attendance() {
 
       {/* Attendance Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -207,6 +208,47 @@ export default function Attendance() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden">
+          {mockAttendance.map((attendance: any) => (
+            <div key={attendance.id} className="p-4 border-b border-gray-200 last:border-b-0">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900 mb-1">
+                    {getLabourName(attendance.labourId)}
+                  </h4>
+                  <p className="text-xs text-gray-600">{getSiteName(attendance.siteId)}</p>
+                </div>
+                <div className="text-right">
+                  <Badge className={getStatusColor(attendance.status)}>
+                    {attendance.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                <div>
+                  <span className="text-gray-500">Date:</span>
+                  <span className="ml-1 text-gray-900">
+                    {new Date(attendance.date).toLocaleDateString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Hours:</span>
+                  <span className="ml-1 text-gray-900">{attendance.hoursWorked} hours</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1">
+                  <i className="fas fa-edit mr-1"></i>
+                  Edit
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </AppLayout>

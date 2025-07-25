@@ -13,36 +13,44 @@ const navigation = [
   { name: "Invoices", href: "/invoices", icon: "fas fa-file-invoice" },
   { name: "Attendance", href: "/attendance", icon: "fas fa-clipboard-check" },
   { name: "Reports", href: "/reports", icon: "fas fa-chart-bar" },
+  { name: "Notifications", href: "/notifications", icon: "fas fa-bell" },
   { name: "Settings", href: "/settings", icon: "fas fa-cog" },
 ];
 
 export default function Sidebar() {
   const [location] = useLocation();
   const { logout } = useAuth();
-  const { isOpen, close } = useSidebar();
+  const { isOpen, close, isMobile } = useSidebar();
 
-  // Close sidebar on route change
+  // Close sidebar on route change (mobile only)
   useEffect(() => {
-    close();
+    if (isMobile) {
+      close();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location]);
+  }, [location, isMobile]);
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        className={cn(
-          "fixed inset-0 bg-black bg-opacity-40 z-40 transition-opacity duration-300",
-          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        )}
-        onClick={close}
-        aria-hidden={!isOpen}
-      />
-      {/* Drawer Sidebar */}
+      {/* Overlay - only show on mobile */}
+      {isMobile && (
+        <div
+          className={cn(
+            "fixed inset-0 bg-black bg-opacity-40 z-40 transition-opacity duration-300 lg:hidden",
+            isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          )}
+          onClick={close}
+          aria-hidden={!isOpen}
+        />
+      )}
+      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full w-64 bg-white shadow-2xl text-black z-50 transform transition-transform duration-300",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed top-0 left-0 h-full w-64 bg-white shadow-2xl text-black z-50 transition-transform duration-300",
+          // Desktop: always visible, Mobile: slide in/out
+          isMobile 
+            ? (isOpen ? "translate-x-0" : "-translate-x-full")
+            : "translate-x-0"
         )}
         aria-label="Sidebar"
       >

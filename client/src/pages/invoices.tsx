@@ -14,13 +14,13 @@ export default function Invoices() {
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const { toast } = useToast();
 
-  const { data: invoices, isLoading } = useQuery({
+  const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['/api/invoices'],
-  });
+  }) as { data: Invoice[], isLoading: boolean };
 
-  const { data: sites } = useQuery({
+  const { data: sites = [] } = useQuery({
     queryKey: ['/api/sites'],
-  });
+  }) as { data: any[] };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -81,7 +81,7 @@ export default function Invoices() {
 
   return (
     <AppLayout title="Invoices">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-800">All Invoices</h3>
           <p className="text-sm text-gray-600">Manage invoices and payment tracking</p>
@@ -117,7 +117,8 @@ export default function Invoices() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -146,7 +147,7 @@ export default function Invoices() {
                 <tr key={invoice.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {invoice.invoiceNumberOrImg || `INV-${invoice.id}`}
+                      {invoice.invoiceNumber || `INV-${invoice.id}`}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -186,6 +187,62 @@ export default function Invoices() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden">
+          {invoices?.map((invoice: Invoice) => (
+            <div key={invoice.id} className="p-4 border-b border-gray-200 last:border-b-0">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900 mb-1">
+                    {invoice.invoiceNumber || `INV-${invoice.id}`}
+                  </h4>
+                  <p className="text-xs text-gray-600">{invoice.siteId ? getSiteName(invoice.siteId) : 'N/A'}</p>
+                </div>
+                <div className="text-right">
+                  <Badge className={getStatusColor(invoice.paymentStatus)}>
+                    {invoice.paymentStatus}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                <div>
+                  <span className="text-gray-500">Total:</span>
+                  <span className="ml-1 text-gray-900">${invoice.grandTotal || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Date:</span>
+                  <span className="ml-1 text-gray-900">
+                    {invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleEdit(invoice)}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                >
+                  <i className="fas fa-edit mr-1"></i>
+                  Edit
+                </Button>
+                <Button
+                  onClick={() => handleDelete(invoice.id)}
+                  variant="destructive"
+                  size="sm"
+                  className="flex-1"
+                  disabled={deleteMutation.isPending}
+                >
+                  <i className="fas fa-trash mr-1"></i>
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </AppLayout>

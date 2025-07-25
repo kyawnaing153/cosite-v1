@@ -22,9 +22,9 @@ export default function Sites() {
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const { toast } = useToast();
 
-  const { data: sites, isLoading } = useQuery({
+  const { data: sites = [], isLoading } = useQuery({
     queryKey: ["/api/sites"],
-  });
+  }) as { data: any[], isLoading: boolean };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -102,7 +102,7 @@ export default function Sites() {
 
   return (
     <AppLayout title="Construction Sites">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-800">All Sites</h3>
           <p className="text-sm text-gray-600">
@@ -140,7 +140,8 @@ export default function Sites() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -177,7 +178,6 @@ export default function Sites() {
                     <div className="text-sm font-medium text-gray-900">
                       {site.siteName}
                     </div>
-                    {/* <div className="text-sm text-gray-500">{site.location}</div> */}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {site.location}
@@ -191,7 +191,7 @@ export default function Sites() {
                     Ks {site.budget?.toLocaleString() || "N/A"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(site.startDate).toLocaleDateString()}
+                    {site.startDate ? new Date(site.startDate).toLocaleDateString() : "N/A"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <Button
@@ -216,6 +216,58 @@ export default function Sites() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden">
+          {sites?.map((site: Site, idx: number) => (
+            <div key={site.id} className="p-4 border-b border-gray-200 last:border-b-0">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-gray-500">#{idx + 1}</span>
+                    <Badge className={getStatusColor(site.status)}>
+                      {getStatusText(site.status)}
+                    </Badge>
+                  </div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-1">
+                    {site.siteName}
+                  </h4>
+                  <p className="text-xs text-gray-600">{site.location}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">
+                    Ks {site.budget?.toLocaleString() || "N/A"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {site.startDate ? new Date(site.startDate).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleEdit(site)}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                >
+                  <i className="fas fa-edit mr-1"></i>
+                  Edit
+                </Button>
+                <Button
+                  onClick={() => handleDelete(site.id)}
+                  variant="destructive"
+                  size="sm"
+                  className="flex-1"
+                  disabled={deleteMutation.isPending}
+                >
+                  <i className="fas fa-trash mr-1"></i>
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </AppLayout>

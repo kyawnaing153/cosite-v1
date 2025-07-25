@@ -1,14 +1,38 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, pgEnum, varchar } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  boolean,
+  timestamp,
+  decimal,
+  pgEnum,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
 export const userStatusEnum = pgEnum("user_status", ["active", "inactive"]);
-export const siteStatusEnum = pgEnum("site_status", ["completed", "on_hold", "on_progress"]);
-export const labourTypeEnum = pgEnum("labour_type", ["office_staff", "hire_worker", "subcontractor_labour"]);
+export const siteStatusEnum = pgEnum("site_status", [
+  "completed",
+  "on_hold",
+  "on_progress",
+]);
+export const labourTypeEnum = pgEnum("labour_type", [
+  "office_staff",
+  "hire_worker",
+  "subcontractor_labour",
+]);
 export const paymentStatusEnum = pgEnum("payment_status", ["paid", "credit"]);
-export const attendanceStatusEnum = pgEnum("attendance_status", ["present", "absent", "half_day"]);
+export const attendanceStatusEnum = pgEnum("attendance_status", [
+  "present",
+  "absent",
+  "half_day",
+]);
+export const notificationTypeEnum = pgEnum("notification_type", ["info", "warning", "error", "success"]);
+export const notificationStatusEnum = pgEnum("notification_status", ["unread", "read"]);
 
 // Users table
 export const users = pgTable("users", {
@@ -70,14 +94,29 @@ export const purchases = pgTable("purchases", {
   id: serial("purchase_id").primaryKey(),
   siteId: integer("site_id").references(() => sites.id),
   purchaseDate: timestamp("purchase_date").defaultNow(),
-  purchaseType: varchar("purchase_type", { length: 100 }),
-  quantity: decimal("quantity", { precision: 10, scale: 2 }),
-  units: varchar("units", { length: 50 }),
-  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
+  //purchaseType: varchar("purchase_type", { length: 100 }),
+  //quantity: decimal("quantity", { precision: 10, scale: 2 }),
+  //units: varchar("units", { length: 50 }),
+  //unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
   totalAmount: decimal("total_amount", { precision: 15, scale: 2 }),
   invoiceNumberORImg: varchar("invoice_number_or_img", { length: 50 }),
   recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
   itemDescription: text("item_description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+//puchase products
+export const purchaseProducts = pgTable("purchase_products", {
+  id: serial("id").primaryKey(),
+  purchaseId: integer("purchase_id")
+    .references(() => purchases.id)
+    .notNull(),
+  name: varchar("purchase_product_name", { length: 255 }),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }),
+  units: varchar("units", { length: 50 }),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
+  singleTotal: decimal("single_total", { precision: 15, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -113,10 +152,15 @@ export const invoices = pgTable("invoices", {
   invoiceDate: timestamp("invoice_date").defaultNow(),
   totalPiecework: decimal("total_piecework", { precision: 15, scale: 2 }),
   totalDailyWage: decimal("total_daily_wage", { precision: 15, scale: 2 }),
-  totalAdvancePayment: decimal("total_advance_payment", { precision: 15, scale: 2 }),
+  totalAdvancePayment: decimal("total_advance_payment", {
+    precision: 15,
+    scale: 2,
+  }),
   totalRefund: decimal("total_refund", { precision: 15, scale: 2 }),
   grandTotal: decimal("grand_total", { precision: 15, scale: 2 }),
-  paymentStatus: paymentStatusEnum("payment_status").notNull().default("credit"),
+  paymentStatus: paymentStatusEnum("payment_status")
+    .notNull()
+    .default("credit"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -148,6 +192,20 @@ export const attendance = pgTable("attendance", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: serial("notification_id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  type: notificationTypeEnum("type").notNull().default("info"),
+  status: notificationStatusEnum("status").notNull().default("unread"),
+  relatedEntityType: varchar("related_entity_type", { length: 50 }),
+  relatedEntityId: integer("related_entity_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   sites: many(sites),
@@ -155,6 +213,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   salary: many(salary),
   invoice: many(invoices),
   attendance: many(attendance),
+  notifications: many(notifications),
 }));
 
 export const sitesRelations = relations(sites, ({ one, many }) => ({
@@ -167,47 +226,98 @@ export const sitesRelations = relations(sites, ({ one, many }) => ({
   attendance: many(attendance),
 }));
 
-export const labourGroupsRelations = relations(labourGroups, ({ one, many }) => ({
-  labour: many(labour),
-  invoiceLabourDetail: many(invoiceLabourDetail),
-}));
+export const labourGroupsRelations = relations(
+  labourGroups,
+  ({ one, many }) => ({
+    labour: many(labour),
+    invoiceLabourDetail: many(invoiceLabourDetail),
+  })
+);
 
 export const labourRelations = relations(labour, ({ one, many }) => ({
   site: one(sites, { fields: [labour.siteId], references: [sites.id] }),
-  labourGroup: one(labourGroups, { fields: [labour.labourGroupId], references: [labourGroups.id] }),
-  recordedByUser: one(users, { fields: [labour.recordedByUserId], references: [users.id] }),
+  labourGroup: one(labourGroups, {
+    fields: [labour.labourGroupId],
+    references: [labourGroups.id],
+  }),
+  recordedByUser: one(users, {
+    fields: [labour.recordedByUserId],
+    references: [users.id],
+  }),
   salary: many(salary),
   invoiceLabourDetail: many(invoiceLabourDetail),
   attendance: many(attendance),
 }));
 
-export const purchasesRelations = relations(purchases, ({ one }) => ({
+export const purchasesRelations = relations(purchases, ({ one, many }) => ({
   site: one(sites, { fields: [purchases.siteId], references: [sites.id] }),
-  recordedBy: one(users, { fields: [purchases.recordedByUserId], references: [users.id] }),
+  recordedBy: one(users, {
+    fields: [purchases.recordedByUserId],
+    references: [users.id],
+  }),
+  purchaseProducts: many(purchaseProducts),
 }));
+
+export const purchaseProductRelations = relations(
+  purchaseProducts,
+  ({ one }) => ({
+    purchase: one(purchases, {
+      fields: [purchaseProducts.purchaseId],
+      references: [purchases.id],
+    }),
+  })
+);
 
 export const salaryRelations = relations(salary, ({ one }) => ({
   site: one(sites, { fields: [salary.siteId], references: [sites.id] }),
   labour: one(labour, { fields: [salary.labourId], references: [labour.id] }),
-  recordedByUser: one(users, { fields: [salary.recordedByUserId], references: [users.id] }),
+  recordedByUser: one(users, {
+    fields: [salary.recordedByUserId],
+    references: [users.id],
+  }),
 }));
 
 export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   site: one(sites, { fields: [invoices.siteId], references: [sites.id] }),
   invoiceLabourDetail: many(invoiceLabourDetail),
-  recordedByUser: one(users, { fields: [invoices.recordedByUserId], references: [users.id] }),
+  recordedByUser: one(users, {
+    fields: [invoices.recordedByUserId],
+    references: [users.id],
+  }),
 }));
 
-export const invoiceLabourDetailRelations = relations(invoiceLabourDetail, ({ one }) => ({
-  invoice: one(invoices, { fields: [invoiceLabourDetail.invoiceId], references: [invoices.id] }),
-  labour: one(labour, { fields: [invoiceLabourDetail.labourId], references: [labour.id] }),
-  labourGroup: one(labourGroups, { fields: [invoiceLabourDetail.labourGroupId], references: [labourGroups.id] }),
-}));
+export const invoiceLabourDetailRelations = relations(
+  invoiceLabourDetail,
+  ({ one }) => ({
+    invoice: one(invoices, {
+      fields: [invoiceLabourDetail.invoiceId],
+      references: [invoices.id],
+    }),
+    labour: one(labour, {
+      fields: [invoiceLabourDetail.labourId],
+      references: [labour.id],
+    }),
+    labourGroup: one(labourGroups, {
+      fields: [invoiceLabourDetail.labourGroupId],
+      references: [labourGroups.id],
+    }),
+  })
+);
 
 export const attendanceRelations = relations(attendance, ({ one }) => ({
   site: one(sites, { fields: [attendance.siteId], references: [sites.id] }),
-  labour: one(labour, { fields: [attendance.labourId], references: [labour.id] }),
-  recordedByUser: one(users, { fields: [attendance.recordedByUserId], references: [users.id] }),
+  labour: one(labour, {
+    fields: [attendance.labourId],
+    references: [labour.id],
+  }),
+  recordedByUser: one(users, {
+    fields: [attendance.recordedByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.userId], references: [users.id] }),
 }));
 
 // Insert schemas
@@ -217,11 +327,13 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
-export const insertSiteSchema = createInsertSchema(sites).omit({
+export const insertSiteSchema = createInsertSchema(sites)
+  .omit({
     id: true,
     createdAt: true,
     updatedAt: true,
-  }).extend({
+  })
+  .extend({
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
   });
@@ -243,6 +355,14 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
   updatedAt: true,
 });
 
+export const insertPurchaseProductSchema = createInsertSchema(
+  purchaseProducts
+).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertSalarySchema = createInsertSchema(salary).omit({
   id: true,
   createdAt: true,
@@ -255,9 +375,16 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({
   updatedAt: true,
 });
 
-export const insertInvoiceLabourDetailSchema = createInsertSchema(invoiceLabourDetail);
+export const insertInvoiceLabourDetailSchema =
+  createInsertSchema(invoiceLabourDetail);
 
 export const insertAttendanceSchema = createInsertSchema(attendance).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -274,11 +401,17 @@ export type Labour = typeof labour.$inferSelect;
 export type InsertLabour = z.infer<typeof insertLabourSchema>;
 export type Purchase = typeof purchases.$inferSelect;
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
+export type PurchaseProduct = typeof purchaseProducts.$inferSelect;
+export type InsertPurchaseProduct = z.infer<typeof insertPurchaseProductSchema>;
 export type Salary = typeof salary.$inferSelect;
 export type InsertSalary = z.infer<typeof insertSalarySchema>;
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type InvoiceLabourDetail = typeof invoiceLabourDetail.$inferSelect;
-export type InsertInvoiceLabourDetail = z.infer<typeof insertInvoiceLabourDetailSchema>;
+export type InsertInvoiceLabourDetail = z.infer<
+  typeof insertInvoiceLabourDetailSchema
+>;
 export type Attendance = typeof attendance.$inferSelect;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

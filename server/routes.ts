@@ -13,6 +13,7 @@ import {
   insertSalarySchema,
   insertInvoiceSchema,
   insertInvoiceLabourDetailSchema,
+  insertNotificationSchema,
 } from "@shared/schema";
 
 // JWT secret from environment
@@ -129,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Always return an array, even if empty
       const mappedStaffs = Array.isArray(staffs)
         ? staffs.map(user => ({
-            id: user.id ?? user.user_id,
+            id: user.id,
             fullname: user.fullname,
             joinDate: user.joinDate,
           }))
@@ -383,10 +384,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/purchases', authenticateToken, async (req, res) => {
+  app.post('/api/purchases', authenticateToken, async (req: any, res) => {
     try {
-      const purchaseData = insertPurchaseSchema.parse(req.body);
-      const purchase = await storage.createPurchase(purchaseData);
+      const { products, ...purchaseData } = req.body;
+      const validatedPurchaseData = insertPurchaseSchema.parse({
+        ...purchaseData,
+        recordedByUserId: req.user.id,
+      });
+      
+      const purchase = await storage.createPurchaseWithProducts(validatedPurchaseData, products);
       res.status(201).json(purchase);
     } catch (error) {
       console.error('Purchase creation error:', error);
@@ -394,11 +400,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/purchases/:id', authenticateToken, async (req, res) => {
+  app.put('/api/purchases/:id', authenticateToken, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const purchaseData = insertPurchaseSchema.partial().parse(req.body);
-      const purchase = await storage.updatePurchase(id, purchaseData);
+      const { products, ...purchaseData } = req.body;
+      const validatedPurchaseData = insertPurchaseSchema.partial().parse(purchaseData);
+      
+      // Update purchase
+      const purchase = await storage.updatePurchase(id, validatedPurchaseData);
+      
+      // If products are provided, update them as well
+      if (products && Array.isArray(products)) {
+        // Delete existing products and create new ones
+        await storage.updatePurchaseProducts(id, products);
+      }
+      
       res.json(purchase);
     } catch (error) {
       res.status(400).json({ message: 'Invalid purchase data' });
@@ -600,6 +616,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ id, ...attendanceData });
     } catch (error) {
       res.status(400).json({ message: 'Invalid attendance data' });
+    }
+  });
+
+  // Notification routes
+  app.get('/api/notifications', authenticateToken, async (req: any, res) => {
+    try {
+      const notifications = await storage.getNotifications(req.user.id);
+      res.json(notifications);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch notifications' });
+    }
+  });
+
+  app.get('/api/notifications/:id', authenticateToken, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notification = await storage.getNotification(id);
+      if (!notification) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+      res.json(notification);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch notification' });
+    }
+  });
+
+  app.post('/api/notifications', authenticateToken, async (req: any, res) => {
+    try {
+      const notificationData = insertNotificationSchema.parse({
+        ...req.body,
+        userId: req.user.id,
+      });
+      const notification = await storage.createNotification(notificationData);
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error('Notification creation error:', error);
+      res.status(400).json({ message: 'Invalid notification data' });
+    }
+  });
+
+  app.put('/api/notifications/:id', authenticateToken, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notificationData = insertNotificationSchema.partial().parse(req.body);
+      const notification = await storage.updateNotification(id, notificationData);
+      res.json(notification);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid notification data' });
+    }
+  });
+
+  app.delete('/api/notifications/:id', authenticateToken, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteNotification(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+      res.json({ message: 'Notification deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete notification' });
+    }
+  });
+
+  app.patch('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notification = await storage.markNotificationAsRead(id);
+      res.json(notification);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to mark notification as read' });
+    }
+  });
+
+  app.patch('/api/notifications/read-all', authenticateToken, async (req: any, res) => {
+    try {
+      await storage.markAllNotificationsAsRead(req.user.id);
+      res.json({ message: 'All notifications marked as read' });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to mark all notifications as read' });
     }
   });
 
