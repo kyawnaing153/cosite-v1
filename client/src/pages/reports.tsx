@@ -14,28 +14,28 @@ import { useState } from "react";
 import AppLayout from "@/components/layout/app-layout";
 
 export default function Reports() {
-  const [selectedSite, setSelectedSite] = useState<string>("");
+  const [selectedSite, setSelectedSite] = useState<string>("all");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("month");
 
-  const { data: sites } = useQuery({
+  const { data: sites = [] } = useQuery({
     queryKey: ["/api/sites"],
-  });
+  }) as { data: any[] };
 
-  const { data: purchases } = useQuery({
+  const { data: purchases = [] } = useQuery({
     queryKey: ["/api/purchases"],
-  });
+  }) as { data: any[] };
 
-  const { data: salaries } = useQuery({
+  const { data: salaries = [] } = useQuery({
     queryKey: ["/api/salaries"],
-  });
+  }) as { data: any[] };
 
-  const { data: labour } = useQuery({
+  const { data: labour = [] } = useQuery({
     queryKey: ["/api/labour"],
-  });
+  }) as { data: any[] };
 
-  const { data: invoices } = useQuery({
+  const { data: invoices = [] } = useQuery({
     queryKey: ["/api/invoices"],
-  });
+  }) as { data: any[] };
 
   // Calculate totals
   const totalPurchases =
@@ -72,7 +72,7 @@ export default function Reports() {
 
   return (
     <AppLayout title="Reports">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-800">
             Reports & Analytics
@@ -81,12 +81,12 @@ export default function Reports() {
             Generate comprehensive reports for your construction projects
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => handleExport("pdf")}>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => handleExport("pdf")} className="w-full sm:w-auto">
             <i className="fas fa-file-pdf mr-2"></i>
             Export PDF
           </Button>
-          <Button variant="outline" onClick={() => handleExport("excel")}>
+          <Button variant="outline" onClick={() => handleExport("excel")} className="w-full sm:w-auto">
             <i className="fas fa-file-excel mr-2"></i>
             Export Excel
           </Button>
@@ -94,15 +94,15 @@ export default function Reports() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex gap-4 items-center">
-        <div className="flex items-center gap-2">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <label className="text-sm font-medium text-gray-700">Site:</label>
           <Select value={selectedSite} onValueChange={setSelectedSite}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="All Sites" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Sites</SelectItem>
+              <SelectItem value="all">All Sites</SelectItem>
               {sites?.map((site: any) => (
                 <SelectItem key={site.id} value={site.id.toString()}>
                   {site.siteName}
@@ -111,10 +111,10 @@ export default function Reports() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <label className="text-sm font-medium text-gray-700">Period:</label>
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -128,7 +128,7 @@ export default function Reports() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600">
@@ -312,7 +312,38 @@ export default function Reports() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* Mobile Card View */}
+          <div className="block sm:hidden space-y-3">
+            {purchases?.slice(0, 5).map((purchase: any) => (
+              <div key={`purchase-${purchase.id}`} className="border rounded-lg p-3 bg-gray-50">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="text-sm font-medium text-gray-900">Purchase</div>
+                  <div className="text-sm font-medium text-red-600">-${purchase.totalAmount}</div>
+                </div>
+                <div className="text-sm text-gray-600 mb-1">{purchase.itemDescription}</div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{new Date(purchase.purchaseDate).toLocaleDateString()}</span>
+                  <span>{sites?.find((s: any) => s.id === purchase.siteId)?.siteName || "N/A"}</span>
+                </div>
+              </div>
+            ))}
+            {salaries?.slice(0, 5).map((salary: any) => (
+              <div key={`salary-${salary.id}`} className="border rounded-lg p-3 bg-gray-50">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="text-sm font-medium text-gray-900">Wage Payment</div>
+                  <div className="text-sm font-medium text-red-600">-${salary.paymentAmount}</div>
+                </div>
+                <div className="text-sm text-gray-600 mb-1">{salary.paymentType} payment</div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{new Date(salary.paymentDate).toLocaleDateString()}</span>
+                  <span>{sites?.find((s: any) => s.id === salary.siteId)?.siteName || "N/A"}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>

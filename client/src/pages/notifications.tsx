@@ -136,16 +136,16 @@ export default function Notifications() {
 
   return (
     <AppLayout title="Notifications">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
           <p className="text-sm text-gray-600">
             {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -159,6 +159,7 @@ export default function Notifications() {
               onClick={handleMarkAllAsRead}
               variant="outline"
               disabled={markAllAsReadMutation.isPending}
+              className="w-full sm:w-auto"
             >
               <i className="fas fa-check-double mr-2"></i>
               Mark All as Read
@@ -166,7 +167,7 @@ export default function Notifications() {
           )}
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
                 <i className="fas fa-plus mr-2"></i>
                 Create Test Notification
               </Button>
@@ -205,9 +206,9 @@ export default function Notifications() {
               notification.status === 'unread' ? 'border-l-4 border-l-orange-500 bg-orange-50' : ''
             }`}>
               <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge className={getTypeColor(notification.type)}>
                         {notification.type}
                       </Badge>
@@ -223,6 +224,7 @@ export default function Notifications() {
                         variant="outline"
                         size="sm"
                         disabled={markAsReadMutation.isPending}
+                        className="text-xs"
                       >
                         <i className="fas fa-check mr-1"></i>
                         Mark Read
@@ -233,6 +235,7 @@ export default function Notifications() {
                       variant="destructive"
                       size="sm"
                       disabled={deleteMutation.isPending}
+                      className="text-xs"
                     >
                       <i className="fas fa-trash mr-1"></i>
                       Delete
@@ -243,12 +246,12 @@ export default function Notifications() {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-700 mb-3">{notification.message}</p>
-                <div className="flex justify-between items-center text-sm text-gray-500">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-sm text-gray-500">
                   <span>
                     {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : 'N/A'}
                   </span>
                   {notification.relatedEntityType && notification.relatedEntityId && (
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded self-start sm:self-center">
                       {notification.relatedEntityType} #{notification.relatedEntityId}
                     </span>
                   )}
