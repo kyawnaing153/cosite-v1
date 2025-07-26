@@ -273,12 +273,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Purchase operations
-  async getPurchases(siteId?: number): Promise<Purchase[]> {
-    const query = db.select().from(purchases);
-    if (siteId) {
-      query.where(eq(purchases.siteId, siteId));
-    }
-    return await query.orderBy(desc(purchases.createdAt));
+  async getPurchases(siteId?: number): Promise<any[]> {
+    const query = db.query.purchases.findMany({
+    with: {
+      purchaseProducts: true,
+    },
+    orderBy: [desc(purchases.createdAt)],
+    where: siteId ? eq(purchases.siteId, siteId) : undefined,
+  });
+
+  return await query;
   }
 
   async getPurchaseWithProducts(id: number): Promise<Purchase & { products: PurchaseProduct[] } | undefined> {
@@ -300,22 +304,6 @@ export class DatabaseStorage implements IStorage {
       ...purchase,
       products,
     };
-  }
-
-  async getPurchase(id: number): Promise<Purchase | undefined> {
-    const [purchase] = await db
-      .select()
-      .from(purchases)
-      .where(eq(purchases.id, id));
-    return purchase;
-  }
-
-  async createPurchase(purchaseData: InsertPurchase): Promise<Purchase> {
-    const [purchase] = await db
-      .insert(purchases)
-      .values(purchaseData)
-      .returning();
-    return purchase;
   }
 
   async createPurchaseWithProducts(purchaseData: InsertPurchase, products: any[]): Promise<Purchase> {
@@ -379,10 +367,23 @@ export class DatabaseStorage implements IStorage {
     return purchase;
   }
 
+  // async deletePurchase(id: number): Promise<boolean> {
+  //   const result = await db.delete(purchases).where(eq(purchases.id, id));
+  //   return (result.rowCount ?? 0) > 0;
+  // }
+
   async deletePurchase(id: number): Promise<boolean> {
-    const result = await db.delete(purchases).where(eq(purchases.id, id));
-    return (result.rowCount ?? 0) > 0;
-  }
+  const result = await db.transaction(async (tx) => {
+    // Delete related products first
+    await tx.delete(purchaseProducts).where(eq(purchaseProducts.purchaseId, id));
+
+    // Then delete the purchase
+    const deleted = await tx.delete(purchases).where(eq(purchases.id, id));
+    return (deleted.rowCount ?? 0) > 0;
+  });
+
+  return result;
+}
 
   // Salary operations
   async getSalaries(siteId?: number, labourId?: number): Promise<Salary[]> {

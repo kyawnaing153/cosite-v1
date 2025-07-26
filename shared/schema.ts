@@ -94,10 +94,6 @@ export const purchases = pgTable("purchases", {
   id: serial("purchase_id").primaryKey(),
   siteId: integer("site_id").references(() => sites.id),
   purchaseDate: timestamp("purchase_date").defaultNow(),
-  //purchaseType: varchar("purchase_type", { length: 100 }),
-  //quantity: decimal("quantity", { precision: 10, scale: 2 }),
-  //units: varchar("units", { length: 50 }),
-  //unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
   totalAmount: decimal("total_amount", { precision: 15, scale: 2 }),
   invoiceNumberORImg: varchar("invoice_number_or_img", { length: 50 }),
   recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
@@ -353,7 +349,9 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}).extend({
+    purchaseDate: z.coerce.date(),
+  });
 
 export const insertPurchaseProductSchema = createInsertSchema(
   purchaseProducts

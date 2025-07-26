@@ -130,10 +130,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Always return an array, even if empty
       const mappedStaffs = Array.isArray(staffs)
         ? staffs.map(user => ({
-            id: user.id,
-            fullname: user.fullname,
-            joinDate: user.joinDate,
-          }))
+          id: user.id,
+          fullname: user.fullname,
+          joinDate: user.joinDate,
+        }))
         : [];
 
       res.json(mappedStaffs);
@@ -374,7 +374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/purchases/:id', authenticateToken, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const purchase = await storage.getPurchase(id);
+      const purchase = await storage.getPurchaseWithProducts(id);
       if (!purchase) {
         return res.status(404).json({ message: 'Purchase not found' });
       }
@@ -387,13 +387,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/purchases', authenticateToken, async (req: any, res) => {
     try {
       const { products, ...purchaseData } = req.body;
-      const validatedPurchaseData = insertPurchaseSchema.parse({
+      const validatedPurchase = insertPurchaseSchema.parse({
         ...purchaseData,
         recordedByUserId: req.user.id,
       });
-      
-      const purchase = await storage.createPurchaseWithProducts(validatedPurchaseData, products);
-      res.status(201).json(purchase);
+
+      const newPurchase = await storage.createPurchaseWithProducts(validatedPurchase, products);
+
+      res.status(201).json({
+        message: "Purchase created successfully",
+        purchase: newPurchase,
+      });
     } catch (error) {
       console.error('Purchase creation error:', error);
       res.status(400).json({ message: 'Invalid purchase data' });
@@ -405,16 +409,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { products, ...purchaseData } = req.body;
       const validatedPurchaseData = insertPurchaseSchema.partial().parse(purchaseData);
-      
+
       // Update purchase
       const purchase = await storage.updatePurchase(id, validatedPurchaseData);
-      
+
       // If products are provided, update them as well
       if (products && Array.isArray(products)) {
         // Delete existing products and create new ones
         await storage.updatePurchaseProducts(id, products);
       }
-      
+
       res.json(purchase);
     } catch (error) {
       res.status(400).json({ message: 'Invalid purchase data' });

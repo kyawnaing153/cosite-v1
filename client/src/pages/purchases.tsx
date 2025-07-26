@@ -7,11 +7,23 @@ import PurchaseForm from "@/components/forms/purchase-form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Purchase } from "@shared/schema";
+import type { purchaseProducts } from "@shared/schema";
 import AppLayout from "@/components/layout/app-layout";
+
+type FullPurchase = Purchase & {
+  purchaseProducts: {
+    id?: number; // optional if creating new
+    name: string;
+    quantity: number;
+    units: string;
+    unitPrice: number;
+    singleTotal: number;
+  }[];
+};
 
 export default function Purchases() {
   const [showForm, setShowForm] = useState(false);
-  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
+  const [editingPurchase, setEditingPurchase] = useState<FullPurchase | null>(null);
   const { toast } = useToast();
 
   const { data: purchases = [], isLoading } = useQuery({
@@ -42,7 +54,8 @@ export default function Purchases() {
     },
   });
 
-  const handleEdit = (purchase: Purchase) => {
+  const handleEdit = (purchase: FullPurchase) => {
+    //console.log(purchase);
     setEditingPurchase(purchase);
     setShowForm(true);
   };
@@ -121,7 +134,7 @@ export default function Purchases() {
               setEditingPurchase(null);
               setShowForm(true);
             }}
-            className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+            className="bg-cyan-600 hover:bg-cyan-700 w-full sm:w-auto"
           >
             <i className="fas fa-plus mr-2"></i>
             Add New Purchase
@@ -160,7 +173,7 @@ export default function Purchases() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {purchases?.map((purchase: Purchase) => (
+                {purchases?.map((purchase: FullPurchase) => (
                   <tr key={purchase.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -174,13 +187,25 @@ export default function Purchases() {
                       {purchase.siteId ? getSiteName(purchase.siteId) : "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      N/A
+                      <ul className="text-sm text-gray-700">
+                        {purchase.purchaseProducts?.map(p => (
+                          <li key={p.id}>
+                            {p.name}: {p.quantity} {p.units}
+                          </li>
+                        ))}
+                      </ul>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      N/A
+                      <ul className="text-sm text-gray-700">
+                        {purchase.purchaseProducts?.map(p => (
+                          <li key={p.id}>
+                            {p.unitPrice} = {p.singleTotal}
+                          </li>
+                        ))}
+                      </ul>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ${purchase.totalAmount || "0"}
+                      Ks {purchase.totalAmount || "0"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {purchase.purchaseDate ? new Date(purchase.purchaseDate).toLocaleDateString() : "N/A"}
@@ -212,7 +237,7 @@ export default function Purchases() {
 
           {/* Mobile Card View */}
           <div className="md:hidden">
-            {purchases?.map((purchase: Purchase) => (
+            {purchases?.map((purchase: FullPurchase) => (
               <div key={purchase.id} className="p-4 border-b border-gray-200 last:border-b-0">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
@@ -223,14 +248,14 @@ export default function Purchases() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-gray-900">
-                      ${purchase.totalAmount || "0"}
+                      Ks {purchase.totalAmount || "0"}
                     </p>
                     <p className="text-xs text-gray-500">
                       {purchase.purchaseDate ? new Date(purchase.purchaseDate).toLocaleDateString() : "N/A"}
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
                   <div>
                     <span className="text-gray-500">Site:</span>
@@ -238,7 +263,15 @@ export default function Purchases() {
                   </div>
                   <div>
                     <span className="text-gray-500">Quantity:</span>
-                    <span className="ml-1 text-gray-900">N/A</span>
+                    <span className="ml-1 text-gray-900">
+                      <ul className="text-sm text-gray-700">
+                        {purchase.purchaseProducts?.map(p => (
+                          <li key={p.id}>
+                            {p.name}: {p.quantity} {p.units}
+                          </li>
+                        ))}
+                      </ul>
+                    </span>
                   </div>
                 </div>
 

@@ -25,7 +25,7 @@ const productRowSchema = z.object({
 // Main form schema
 const purchaseFormSchema = z.object({
   siteId: z.string().min(1, "Site is required"),
-  purchaseDate: z.string().min(1, "Purchase date is required"),
+  purchaseDate: z.string().optional(),
   itemDescription: z.string().optional(),
   invoiceNumberORImg: z.string().optional(),
   products: z.array(productRowSchema).min(1, "At least one product is required"),
@@ -33,7 +33,7 @@ const purchaseFormSchema = z.object({
 });
 
 interface PurchaseFormProps {
-  purchase?: Purchase | null;
+  purchase?: FullPurchase | null;
   onSuccess: () => void;
 }
 
@@ -44,25 +44,47 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
     queryKey: ['/api/sites'],
   }) as { data: any[] };
 
+  // Updated defaultValues to handle nested products
+  const defaultFormValues = React.useMemo(() => {
+    if (purchase) {
+      return {
+        siteId: purchase.siteId?.toString() || "",
+        purchaseDate: purchase.purchaseDate ? new Date(purchase.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        itemDescription: purchase.itemDescription || "",
+        invoiceNumberORImg: purchase.invoiceNumberORImg || "",
+        products: purchase.purchaseProducts.map(p => ({
+          name: p.name,
+          quantity: p.quantity.toString(),
+          units: p.units,
+          unitPrice: p.unitPrice.toString(),
+          discount: p.discount?.toString() || "",
+          singleTotal: p.singleTotal?.toString() || "",
+        })),
+        totalAmount: purchase.totalAmount?.toString() || "0",
+      };
+    }
+
+    // Default values for a new purchase
+    return {
+      siteId: "",
+      purchaseDate: new Date().toISOString().split('T')[0],
+      itemDescription: "",
+      invoiceNumberORImg: "",
+      products: [{
+        name: "",
+        quantity: "",
+        units: "pcs",
+        unitPrice: "",
+        discount: "",
+        singleTotal: "",
+      }],
+      totalAmount: "0",
+    };
+  }, [purchase]);
+
   const form = useForm<z.infer<typeof purchaseFormSchema>>({
     resolver: zodResolver(purchaseFormSchema),
-    defaultValues: {
-      siteId: purchase?.siteId?.toString() || "",
-      purchaseDate: purchase?.purchaseDate ? new Date(purchase.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      itemDescription: purchase?.itemDescription || "",
-      invoiceNumberORImg: purchase?.invoiceNumberORImg || "",
-      products: [
-        {
-          name: "",
-          quantity: "",
-          units: "pcs",
-          unitPrice: "",
-          discount: "",
-          singleTotal: "",
-        }
-      ],
-      totalAmount: purchase?.totalAmount?.toString() || "0",
-    },
+    defaultValues: defaultFormValues,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -81,7 +103,7 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
       const unitPrice = parseFloat(product.unitPrice);
       const discount = parseFloat(product.discount || "0");
       const total = (quantity * unitPrice) - (quantity * unitPrice * discount / 100);
-      form.setValue(`products.${index}.singleTotal`, total.toFixed(2));
+      form.setValue(`products.${index}.singleTotal`, total.toFixed(1));
       return total;
     }
     return 0;
@@ -91,7 +113,7 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
     const totalAmount = watchedProducts.reduce((sum, product, index) => {
       return sum + calculateProductTotal(index);
     }, 0);
-    form.setValue("totalAmount", totalAmount.toFixed(2));
+    form.setValue("totalAmount", totalAmount.toFixed(1));
     return totalAmount;
   };
 
@@ -105,10 +127,10 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
       // Transform data for API
       const submitData = {
         siteId: parseInt(data.siteId),
-        purchaseDate: data.purchaseDate,
+        purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : undefined,
         itemDescription: data.itemDescription,
         invoiceNumberORImg: data.invoiceNumberORImg,
-        totalAmount: parseFloat(data.totalAmount || "0"),
+        totalAmount: data.totalAmount || "0",
         products: data.products.map(product => ({
           name: product.name,
           quantity: parseFloat(product.quantity),
@@ -278,16 +300,16 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
-                      Product Name*
+                      Product Name OR Service <span className="text-red-600 text-sm">*</span>
                     </th>
                     <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
-                      Quantity*
+                      Quantity <span className="text-red-600 text-sm">*</span>
                     </th>
                     <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
-                      Unit*
+                      Unit <span className="text-red-600 text-sm">*</span>
                     </th>
                     <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
-                      Unit Price*
+                      Unit Price <span className="text-red-600 text-sm">*</span>
                     </th>
                     <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                       Discount(%)
@@ -311,8 +333,8 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                             <FormItem className="mb-0">
                               <FormControl>
                                 <Input
-                                  className="border-0 p-0 h-auto"
-                                  placeholder="Product name"
+                                  className="border h-auto"
+                                  placeholder="Product name or Service"
                                   {...field}
                                 />
                               </FormControl>
@@ -330,13 +352,13 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                               <FormControl>
                                 <Input
                                   type="number"
-                                  step="0.01"
-                                  className="border-0 p-0 h-auto"
+                                  step="1" min={0}
+                                  className="border h-auto"
                                   placeholder="Quantity"
                                   {...field}
                                   onChange={(e) => {
                                     field.onChange(e);
-                                    setTimeout(() => calculateProductTotal(index), 100);
+                                    setTimeout(() => calculateProductTotal(index), calculateTotalAmount(), 100);
                                   }}
                                 />
                               </FormControl>
@@ -353,7 +375,7 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                             <FormItem className="mb-0">
                               <FormControl>
                                 <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger className="border-0 p-0 h-auto">
+                                  <SelectTrigger className="border h-auto">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -361,7 +383,7 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                                     <SelectItem value="kg">kg</SelectItem>
                                     <SelectItem value="m">m</SelectItem>
                                     <SelectItem value="sqm">sqm</SelectItem>
-                                    <SelectItem value="l">l</SelectItem>
+                                    <SelectItem value="l">li</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </FormControl>
@@ -379,13 +401,13 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                               <FormControl>
                                 <Input
                                   type="number"
-                                  step="0.01"
-                                  className="border-0 p-0 h-auto"
+                                  step="1" min={0}
+                                  className="border h-auto"
                                   placeholder="Unit Price"
                                   {...field}
                                   onChange={(e) => {
                                     field.onChange(e);
-                                    setTimeout(() => calculateProductTotal(index), 100);
+                                    setTimeout(() => calculateProductTotal(index), calculateTotalAmount(), 100);
                                   }}
                                 />
                               </FormControl>
@@ -403,13 +425,13 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                               <FormControl>
                                 <Input
                                   type="number"
-                                  step="0.01"
-                                  className="border-0 p-0 h-auto"
+                                  step="1" min={0}
+                                  className="border h-auto"
                                   placeholder="Discount"
                                   {...field}
                                   onChange={(e) => {
                                     field.onChange(e);
-                                    setTimeout(() => calculateProductTotal(index), 100);
+                                    setTimeout(() => calculateProductTotal(index), calculateTotalAmount(), 100);
                                   }}
                                 />
                               </FormControl>
@@ -427,8 +449,8 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                               <FormControl>
                                 <Input
                                   type="number"
-                                  step="0.01"
-                                  className="border-0 p-0 h-auto bg-gray-50"
+                                  step="1" min={0}
+                                  className="border h-auto bg-gray-200"
                                   placeholder="Single Total"
                                   {...field}
                                   readOnly
@@ -444,7 +466,7 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                           <Button
                             type="button"
                             onClick={addProductRow}
-                            className="bg-teal-600 hover:bg-teal-700 text-white p-2 rounded-lg"
+                            className="bg-cyan-600 hover:bg-cyan-700 text-white p-2 sm:py-2 sm:px-4 rounded-lg"
                           >
                             <i className="fas fa-plus"></i>
                           </Button>
@@ -452,7 +474,7 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                           <Button
                             type="button"
                             onClick={() => removeProductRow(index)}
-                            className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg"
+                            className="bg-red-600 hover:bg-red-700 text-white p-2 sm:py-2 sm:px-4 rounded-lg"
                           >
                             <i className="fas fa-times"></i>
                           </Button>
@@ -479,10 +501,9 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
                     <FormControl>
                       <Input
                         type="number"
-                        step="0.01"
+                        step="1" min={0}
                         className="bg-gray-50 font-semibold"
                         {...field}
-                        readOnly
                       />
                     </FormControl>
                     <FormMessage />
@@ -497,7 +518,7 @@ export default function PurchaseForm({ purchase, onSuccess }: PurchaseFormProps)
             <Button
               type="submit"
               disabled={mutation.isPending}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2"
+              className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2"
             >
               <i className="fas fa-save mr-2"></i>
               {mutation.isPending ? 'Saving...' : 'Save Purchase'}
