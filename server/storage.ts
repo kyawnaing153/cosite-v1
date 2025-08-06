@@ -87,15 +87,13 @@ export interface IStorage {
   // Invoice operations
   getInvoices(siteId?: number): Promise<Invoice[]>;
   getInvoice(id: number): Promise<Invoice | undefined>;
-  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
-  updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice>;
+  //createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  //updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice>;
   deleteInvoice(id: number): Promise<boolean>;
+  createInvoiceWithDetails(invoice: InsertInvoice, details: any[]): Promise<Invoice>;
 
   // Invoice Labour Detail operations
   getInvoiceLabourDetails(invoiceId: number): Promise<InvoiceLabourDetail[]>;
-  createInvoiceLabourDetail(
-    detail: InsertInvoiceLabourDetail
-  ): Promise<InvoiceLabourDetail>;
 
   // Dashboard operations
   getDashboardMetrics(): Promise<{
@@ -453,21 +451,66 @@ export class DatabaseStorage implements IStorage {
     return invoice;
   }
 
-  async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
-    const [invoice] = await db.insert(invoices).values(invoiceData).returning();
-    return invoice;
+
+  async createInvoiceWithDetails(invoiceData: InsertInvoice, details: any[]): Promise<Invoice> {
+    return await db.transaction(async (tx) => {
+      // Create the invoice first
+      const [invoice] = await tx
+        .insert(invoices)
+        .values(invoiceData)
+        .returning();
+
+      // Create the invoice labour details
+      if (details && details.length > 0) {
+        const detailData = details.map(detail => ({
+          invoiceId: invoice.id,
+          labourId: detail.labourId,
+          labourGroupId: detail.labourGroupId,
+          pieceworkPayment: detail.pieceworkPayment,
+          dailyWage: detail.dailyWage,
+          advancePayment: detail.advancePayment,
+          refund: detail.refund,
+          sign: detail.sign,
+        }));
+
+        await tx.insert(invoiceLabourDetail).values(detailData);
+      }
+
+      return invoice;
+    });
   }
 
-  async updateInvoice(
-    id: number,
-    invoiceData: Partial<InsertInvoice>
-  ): Promise<Invoice> {
-    const [invoice] = await db
-      .update(invoices)
-      .set({ ...invoiceData, updatedAt: new Date() })
-      .where(eq(invoices.id, id))
-      .returning();
-    return invoice;
+  async updateInvoiceWithDetails( id: number, invoiceData: Partial<InsertInvoice>, details: any[]): Promise<Invoice> {
+    return await db.transaction(async (tx) => {
+      // Update the invoice
+      const [updatedInvoice] = await tx
+        .update(invoices)
+        .set({ ...invoiceData, updatedAt: new Date() })
+        .where(eq(invoices.id, id))
+        .returning();
+
+      // Update the invoice labour details
+      if (details && details.length > 0) {
+        // Delete existing labour details for this invoice
+        await tx.delete(invoiceLabourDetail).where(eq(invoiceLabourDetail.invoiceId, id));
+
+        // Insert new labour details
+        const detailData = details.map(detail => ({
+          invoiceId: id,
+          labourId: detail.labourId,
+          labourGroupId: detail.labourGroupId,
+          pieceworkPayment: detail.pieceworkPayment,
+          dailyWage: detail.dailyWage,
+          advancePayment: detail.advancePayment,
+          refund: detail.refund,
+          sign: detail.sign,
+        }));
+
+        await tx.insert(invoiceLabourDetail).values(detailData);
+      }
+
+      return updatedInvoice;
+    });
   }
 
   async deleteInvoice(id: number): Promise<boolean> {
@@ -485,15 +528,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(invoiceLabourDetail.invoiceId, invoiceId));
   }
 
-  async createInvoiceLabourDetail(
-    detail: InsertInvoiceLabourDetail
-  ): Promise<InvoiceLabourDetail> {
-    const [newDetail] = await db
-      .insert(invoiceLabourDetail)
-      .values(detail)
-      .returning();
-    return newDetail;
-  }
 
   // Dashboard operations
   async getDashboardMetrics(): Promise<{

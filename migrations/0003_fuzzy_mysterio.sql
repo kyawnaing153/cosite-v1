@@ -1,0 +1,1 @@
+ALTER TABLE "invoice_labour_detail" ADD COLUMN "invoice_labour_detail_id" serial PRIMARY KEY NOT NULL;

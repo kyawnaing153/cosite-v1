@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { z } from "zod";
+import { record, z } from "zod";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import {
@@ -506,8 +506,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const siteId = req.query.siteId ? parseInt(req.query.siteId as string) : undefined;
       const invoices = await storage.getInvoices(siteId);
-      res.json(invoices);
+
+      // Fetch labour details for each invoice
+      const invoicesWithLabourDetails = await Promise.all(
+        invoices.map(async (invoice) => {
+          const labourDetails = await storage.getInvoiceLabourDetails(invoice.id);
+          return {
+            ...invoice,
+            invoiceLabourDetails: labourDetails, // Include labour details in the response
+          };
+        })
+      );
+
+      console.log('Invoices with Labour Details:', invoicesWithLabourDetails); // Log for debugging
+      res.json(invoicesWithLabourDetails);
     } catch (error) {
+      console.error('Failed to fetch invoices:', error);
       res.status(500).json({ message: 'Failed to fetch invoices' });
     }
   });
@@ -525,22 +539,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/invoices', authenticateToken, async (req, res) => {
+  app.post('/api/invoices', authenticateToken, async (req: any, res) => {
     try {
-      const invoiceData = insertInvoiceSchema.parse(req.body);
-      const invoice = await storage.createInvoice(invoiceData);
-      res.status(201).json(invoice);
-    } catch (error) {
+      const { labourDetails, ...invoiceData } = req.body;
+
+      const validatedInvoice = insertInvoiceSchema.parse({
+        ...invoiceData,
+        recordedByUserId: req.user.id,
+      });
+
+      const validatedLabourDetails = z.array(insertInvoiceLabourDetailSchema).parse(labourDetails);
+      //console.log('Validated Invoice:', validatedInvoice);
+      
+      const newInvoice = await storage.createInvoiceWithDetails(validatedInvoice, validatedLabourDetails);
+      console.log('Validated Invoice:', newInvoice);
+
+      res.status(201).json({
+        message: "Invoice created successfully",
+        invoice: newInvoice,
+      });
+    } catch (error: any) {
       console.error('Invoice creation error:', error);
-      res.status(400).json({ message: 'Invalid invoice data' });
+      if (error instanceof z.ZodError) { // Use instanceof ZodError for more robust checking
+        return res.status(400).json({
+          message: 'Invalid invoice data',
+          errors: error.issues, // ZodError provides an 'issues' array
+        });
+      }
+      res.status(500).json({ message: 'Failed to create invoice' });
     }
   });
 
-  app.put('/api/invoices/:id', authenticateToken, async (req, res) => {
+  app.put('/api/invoices/:id', authenticateToken, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const invoiceData = insertInvoiceSchema.partial().parse(req.body);
-      const invoice = await storage.updateInvoice(id, invoiceData);
+      const { labourDetails, ...invoiceData } = req.body;
+      // Validate invoice data
+      const validatedInvoiceData = insertInvoiceSchema.partial().parse(invoiceData);
+
+      // Update invoice
+      const invoice = await storage.updateInvoiceWithDetails(id, validatedInvoiceData, labourDetails);
+
       res.json(invoice);
     } catch (error) {
       res.status(400).json({ message: 'Invalid invoice data' });
@@ -560,30 +599,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Invoice Labour Detail routes
-  app.get('/api/invoice-labour-details/:invoiceId', authenticateToken, async (req, res) => {
-    try {
-      const invoiceId = parseInt(req.params.invoiceId);
-      const details = await storage.getInvoiceLabourDetails(invoiceId);
-      res.json(details);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch invoice labour details' });
-    }
-  });
-
-  app.post('/api/invoice-labour-details', authenticateToken, async (req: any, res) => {
-    try {
-      const detailData = insertInvoiceLabourDetailSchema.parse({
-        ...req.body,
-        recordedByUserId: req.user.id,
-      });
-      const detail = await storage.createInvoiceLabourDetail(detailData);
-      res.status(201).json(detail);
-    } catch (error) {
-      console.error('Invoice labour detail creation error:', error);
-      res.status(400).json({ message: 'Invalid invoice labour detail data' });
-    }
-  });
 
   // Attendance routes (basic implementation)
   app.get('/api/attendance', authenticateToken, async (req, res) => {

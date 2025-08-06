@@ -123,16 +123,7 @@ export const salary = pgTable("salary", {
   siteId: integer("site_id").references(() => sites.id),
   labourId: integer("labour_id").references(() => labour.id),
   paymentDate: timestamp("payment_date").defaultNow(),
-  //paymentAmount: decimal("payment_amount", { precision: 10, scale: 2 }),
   paymentType: varchar("payment_type", { length: 50 }),
-  //dailyWage: decimal("daily_wage", { precision: 10, scale: 2 }),
-  //pieceworkPayment: decimal("piecework_payment", { precision: 10, scale: 2 }),
-  //advancePayment: decimal("advance_payment", { precision: 10, scale: 2 }),
-  //totalDailywage: decimal("total_daily_wage", { precision: 10, scale: 2 }),
-  //totalPiecework: decimal("total_piecework", { precision: 10, scale: 2 }),
-  //totalAdvancePayment: decimal("total_advance_payment", { precision: 10, scale: 2 }),
-  //totalRefund: decimal("total_refund", { precision: 10, scale: 2 }),
-  //refund: decimal("refund", { precision: 10, scale: 2 }),
   remarks: text("remarks"),
   recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -148,21 +139,17 @@ export const invoices = pgTable("invoices", {
   invoiceDate: timestamp("invoice_date").defaultNow(),
   totalPiecework: decimal("total_piecework", { precision: 15, scale: 2 }),
   totalDailyWage: decimal("total_daily_wage", { precision: 15, scale: 2 }),
-  totalAdvancePayment: decimal("total_advance_payment", {
-    precision: 15,
-    scale: 2,
-  }),
+  totalAdvancePayment: decimal("total_advance_payment", { precision: 15, scale: 2 }),
   totalRefund: decimal("total_refund", { precision: 15, scale: 2 }),
   grandTotal: decimal("grand_total", { precision: 15, scale: 2 }),
-  paymentStatus: paymentStatusEnum("payment_status")
-    .notNull()
-    .default("credit"),
+  paymentStatus: paymentStatusEnum("payment_status").notNull().default("credit"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Invoice labour detail table
 export const invoiceLabourDetail = pgTable("invoice_labour_detail", {
+  id: serial("invoice_labour_detail_id").primaryKey(),
   invoiceId: integer("invoice_id").references(() => invoices.id),
   labourId: integer("labour_id").references(() => labour.id),
   labourGroupId: integer("labour_group_id").references(() => labourGroups.id),
@@ -171,7 +158,6 @@ export const invoiceLabourDetail = pgTable("invoice_labour_detail", {
   advancePayment: decimal("advance_payment", { precision: 10, scale: 2 }),
   refund: decimal("refund", { precision: 10, scale: 2 }),
   sign: varchar("sign", { length: 255 }),
-  //recordedByUserId: integer("recorded_by_user_id").references(() => users.id),
 });
 
 // Attendance table (extended from the original requirements)
@@ -371,10 +357,24 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  invoiceDate: z.coerce.date(), // Handles string to Date conversion
+  totalPiecework: z.number().optional().nullable(),
+  totalDailyWage: z.number().optional().nullable(),
+  totalAdvancePayment: z.number().optional().nullable(),
+  totalRefund: z.number().optional().nullable(),
+  grandTotal: z.number().optional().nullable(),
 });
 
-export const insertInvoiceLabourDetailSchema =
-  createInsertSchema(invoiceLabourDetail);
+export const insertInvoiceLabourDetailSchema = createInsertSchema(invoiceLabourDetail).omit({
+  id: true,
+}).extend({
+  pieceworkPayment: z.number().optional().nullable(),
+  dailyWage: z.number().optional().nullable(),
+  advancePayment: z.number().optional().nullable(),
+  refund: z.number().optional().nullable(),
+  sign: z.string().optional().nullable(),
+});
 
 export const insertAttendanceSchema = createInsertSchema(attendance).omit({
   id: true,
@@ -406,9 +406,7 @@ export type InsertSalary = z.infer<typeof insertSalarySchema>;
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type InvoiceLabourDetail = typeof invoiceLabourDetail.$inferSelect;
-export type InsertInvoiceLabourDetail = z.infer<
-  typeof insertInvoiceLabourDetailSchema
->;
+export type InsertInvoiceLabourDetail = z.infer<typeof insertInvoiceLabourDetailSchema>;
 export type Attendance = typeof attendance.$inferSelect;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type Notification = typeof notifications.$inferSelect;
