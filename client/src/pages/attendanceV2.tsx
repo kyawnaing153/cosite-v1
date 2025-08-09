@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import AttendanceForm from "@/components/forms/attendance-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Attendance() {
@@ -34,11 +33,11 @@ export default function Attendance() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'present':
-        return 'bg-cyan-100 text-cyan-800 hover:text-white';
+        return 'bg-green-100 text-green-800';
       case 'absent':
-        return 'bg-orange-100 text-orange-800 hover:text-white';
+        return 'bg-red-100 text-red-800';
       case 'half_day':
-        return 'bg-yellow-100 text-yellow-800 hover:text-white';
+        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -65,6 +64,24 @@ export default function Attendance() {
           <h3 className="text-lg font-semibold text-gray-800">Attendance Management</h3>
           <p className="text-sm text-gray-600">Track worker attendance and work hours</p>
         </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-cyan-600 hover:bg-cyan-700">
+              <i className="fas fa-plus mr-2"></i>
+              Record Attendance
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Record Attendance</DialogTitle>
+            </DialogHeader>
+            <AttendanceForm
+              onSuccess={() => {
+                setIsDialogOpen(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Attendance Summary Cards */}
@@ -136,118 +153,67 @@ export default function Attendance() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto">
-          <Tabs
-            defaultValue={sites[0]?.id?.toString() || ""}
-            value={selectedSite === "all" ? (sites[0]?.id?.toString() || "") : selectedSite}
-            onValueChange={setSelectedSite}
-            className="space-y-6"
-          >
-            <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${sites.length}, minmax(0, 1fr))` }}>
-              {sites.map((site: any) => (
-                <TabsTrigger key={site.id} value={site.id.toString()}>
-                  {site.siteName}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            {sites.map((site: any) => (
-              <TabsContent key={site.id} value={site.id.toString()}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{site.siteName} Attendance</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              #
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Worker Name
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Site
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Today Date
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Hours Worked
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Status
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {mockAttendance
-                            .filter((attendance: any) => attendance.siteId === site.id)
-                            .map((attendance: any, idx: number) => (
-                              <tr key={attendance.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {idx + 1}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {getLabourName(attendance.labourId)}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {getSiteName(attendance.siteId)}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(attendance.date).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {/* Editable input for hours worked */}
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={attendance.hoursWorked}
-                                    className="border rounded px-2 py-1 w-20"
-                                    onChange={e => {
-                                      // TODO: Call API to update hoursWorked here
-                                      const newHours = Number(e.target.value);
-                                      console.log("Update hours for", attendance.id, "to", newHours);
-                                      // Example:
-                                      // await apiRequest('PUT', `/api/attendance/${attendance.id}`, { hoursWorked: newHours });
-                                    }}
-                                  />
-                                  <span className="ml-1">hours</span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap capitalize">
-                                  {/* Dropdown to update status */}
-                                  <Select
-                                    value={attendance.status}
-                                    onValueChange={async (newStatus) => {
-                                      // Call API to update status
-                                      console.log("Update status for", attendance.id, "to", newStatus);
-                                      // Example:
-                                      // await apiRequest('PUT', `/api/attendance/${attendance.id}`, { status: newStatus });
-                                    }}
-                                  >
-                                    <SelectTrigger className={getStatusColor(attendance.status)}>
-                                      <SelectValue>{attendance.status.replace('_', ' ')}</SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="present">Present</SelectItem>
-                                      <SelectItem value="absent">Absent</SelectItem>
-                                      <SelectItem value="half_day">Half Day</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    #
+                  </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Worker Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Site
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Hours Worked
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {mockAttendance.map((attendance: any, idx: number) => (
+                <tr key={attendance.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {idx + 1}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {getLabourName(attendance.labourId)}
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            ))}
-          </Tabs>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {getSiteName(attendance.siteId)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(attendance.date).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap capitalize">
+                    <Badge className={getStatusColor(attendance.status)}>
+                      {attendance.status.replace('_', ' ')}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {attendance.hoursWorked} hours
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <Button variant="outline" size="sm">
+                      <i className="fas fa-edit mr-1"></i>
+                      Edit
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Mobile Card View */}
@@ -279,6 +245,13 @@ export default function Attendance() {
                   <span className="text-gray-500">Hours:</span>
                   <span className="ml-1 text-gray-900">{attendance.hoursWorked} hours</span>
                 </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1">
+                  <i className="fas fa-edit mr-1"></i>
+                  Edit
+                </Button>
               </div>
             </div>
           ))}
